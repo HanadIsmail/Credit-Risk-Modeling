@@ -1,46 +1,77 @@
-# 🏦 Credit Risk Modeling & Scorecard System
+# 🏦 Credit Risk Modeling 
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://streamlit.io/)
-[![Scikit-Learn](https://img.shields.io/badge/scikit--learn-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+An end-to-end machine learning project that predicts the **probability of loan default** for Lauki Finance customers, converts it into a **credit score (300–900)**, and assigns a **risk rating**. Deployed as a live **Streamlit web app**.
 
-An end-to-end Machine Learning and Credit Scorecard solution that evaluates loan applicants, estimates the **Probability of Default (PD)**, and computes a calibrated **Credit Score (300 – 900)** with credit ratings. The system is deployed as an interactive, production-ready web application using Streamlit.
+## 🚀 Live Demo
+🔗 **https://hanadismail-credit-risk-modeling-appmain-m9szfx.streamlit.app/**
 
----
+## 📌 Objective
+Build a model the Risk Unit can use to measure credit risk, meeting these success criteria:
+- AUC, Gini > 85
+- KS statistic > 40
+- Max KS in the first 3 deciles
+- Interpretable model
 
-## 📌 Table of Contents
-- [Project Overview](#-project-overview)
-- [Repository Structure](#-repository-structure)
-- [Datasets](#-datasets)
-- [Machine Learning Pipeline](#-machine-learning-pipeline)
-- [Credit Scorecard Methodology](#-credit-scorecard-methodology)
-- [Streamlit Web Application](#-streamlit-web-application)
-- [Local Setup & Installation](#-local-setup--installation)
-- [Deploying to Streamlit Cloud](#-deploying-to-streamlit-cloud)
-- [Tech Stack](#-tech-stack)
+## 📊 Data
+Two years of loan data from Lauki Finance (Feb 2022–Feb 2024 for training/validation, Mar–May 2024 held out as out-of-time test data), across three sources in `dataset/`:
 
----
+| File | Key fields |
+|------|-----------|
+| **customers.csv** | age, gender, marital status, employment status, income, dependents, residence type, address tenure, city/state/zipcode |
+| **loans.csv** | loan purpose, loan type, sanction amount, loan amount, net disbursement, tenure, principal outstanding, bank balance at application, default flag |
+| **bureau_data.csv** | open/closed accounts, total loan months, delinquent months, total DPD, enquiry count, credit utilization ratio |
 
-## 🚀 Project Overview
+## ⚙️ Modeling Pipeline
+1. **Merge** customers + loans + bureau data; target = `default`
+2. **Clean**: fix invalid `loan_purpose` values (replaced with mode)
+3. **Feature engineer**: `loan_to_income`, `deliquency_ratio`, `avg_dpd_per_deliquency`
+4. **Select features**: IV, VIF, and domain knowledge
+5. **Preprocess**: min-max scaling on numeric features, one-hot encoding on categoricals
+6. **Split**: 75% train / 25% test
+7. **Train**: Logistic Regression, XGBoost, Random Forest
+8. **Tune**: RandomizedSearchCV, Optuna
+9. **Evaluate**: AUC, Gini, KS statistic, classification report
 
-Credit risk assessment is a critical component of retail banking and fintech underwriting. This repository provides:
-1. **End-to-End Analysis & Modeling** in Jupyter Notebook (`Credit_Risk_Modeling.ipynb`), exploring demographic, loan, and credit bureau data.
-2. **Feature Engineering & Transformation**: Weight of Evidence (WoE), Information Value (IV), Outlier handling, and MinMax scaling.
-3. **Model Benchmarking & Hyperparameter Tuning**: Logistic Regression, Random Forest, and XGBoost optimized with Optuna and RandomizedSearchCV.
-4. **Credit Scorecard Calibration**: Mapping default probability into an industry-standard 300 to 900 credit score with risk tiers.
-5. **Interactive Web App**: A clean, responsive Streamlit dashboard (`app/main.py`) for underwriting decisions.
+## 🧠 Top Predictive Variables (by Information Value)
+| Variable | IV | Insight |
+|---|---|---|
+| `credit_utilization_ratio` | 2.35 | Higher credit usage sharply increases default risk |
+| `delinquency_ratio` | 0.71 | More delinquent months strongly linked to default |
+| `loan_to_income` | 0.47 | Higher loan-to-income raises default likelihood |
+| `avg_dpd_per_delinquency` | 0.40 | More days past due per delinquency raises risk |
+| `loan_purpose` | 0.36 | Certain purposes carry more default risk |
+| `residence_type` | 0.24 | Moderate effect on default risk |
+| `loan_tenure_months` | 0.21 | Longer tenure increases default risk |
+| `loan_type` | 0.16 | Minor influence on default risk |
+| `age` | 0.08 | Minimal effect |
+| `number_of_open_accounts` | 0.08 | More open accounts, slightly higher risk |
 
----
+## 📈 Model Performance
+| Model | AUC | Gini |
+|---|---|---|
+| Logistic Regression | 98 | 96 |
+| **XGBoost** | **99** | **96** |
+| Random Forest | 97 | 95 |
 
-## 📂 Repository Structure
+**Final selected model (deployed): Logistic Regression** — chosen for interpretability, with performance essentially matching XGBoost.
 
-```text
+**Overall model evaluation:** AUC 98%, Gini 96%, Top-3-decile capture rate 99.53% — comfortably clears the success criteria above.
+
+## 🏷️ Credit Score Ratings
+| Score | Rating |
+|---|---|
+| 300–499 | Poor |
+| 500–649 | Average |
+| 650–749 | Good |
+| 750–900 | Excellent |
+
+## 📂 Project Structure
+```
 Credit-Risk-Modeling/
 ├── app/
 │   ├── artifacts/
 │   │   └── model_data.joblib        # Model weights, scaler, and feature schemas
-│   ├── main.py                     # Streamlit web application frontend
+│   ├── main.py                      # Streamlit web application frontend
 │   └── prediction_helper.py         # Data preprocessing and inference pipeline
 ├── artifacts/
 │   └── model_data.joblib            # Root model artifact backup
@@ -54,143 +85,23 @@ Credit-Risk-Modeling/
 └── README.md                        # Project documentation
 ```
 
----
+## 🖥️ App Inputs / Outputs
+**Inputs:** age, income, loan amount, loan tenure, average DPD, delinquency ratio, credit utilization ratio, open accounts, residence type, loan purpose, loan type.
 
-## 📊 Datasets
+**Outputs:** default probability, credit score, rating.
 
-The model leverages three integrated datasets located in the [`dataset/`](dataset/) directory:
+## 🛠️ Tech Stack
+Python · Pandas · NumPy · Scikit-learn · XGBoost · Optuna · Statsmodels · Streamlit
 
-| Dataset | Records & Description | Key Features |
-| :--- | :--- | :--- |
-| **`customers.csv`** | Demographic and income details | `age`, `number_of_dependants`, `income`, `years_at_current_address`, `bank_balance_at_application`, `residence_type` |
-| **`loans.csv`** | Loan contract details | `loan_amount`, `loan_tenure_months`, `sanction_amount`, `processing_fee`, `loan_purpose`, `loan_type` |
-| **`bureau_data.csv`** | Historical credit bureau bureau performance | `delinquency_ratio`, `avg_dpd_per_delinquency`, `credit_utilization_ratio`, `number_of_open_accounts`, `enquiry_count` |
-
----
-
-## 🧠 Machine Learning Pipeline
-
-1. **Exploratory Data Analysis (EDA)**: Distribution analysis, correlation matrices, and delinquency pattern inspection.
-2. **Data Cleaning & Preprocessing**:
-   - Outlier capping and treatment.
-   - Missing value imputation.
-   - Categorical one-hot encoding (`residence_type`, `loan_purpose`, `loan_type`).
-3. **Feature Engineering**:
-   - **Loan-to-Income (LTI) Ratio**: $\frac{\text{Loan Amount}}{\text{Income}}$
-   - **Credit Utilization Ratio**: Percentage of revolving credit currently drawn.
-   - **Delinquency Metrics**: Proportion of delinquent past loans and Average Days Past Due (Avg DPD).
-4. **Feature Scaling**: `MinMaxScaler` applied across numerical features to ensure balanced weight contribution.
-5. **Model Benchmarking**:
-   - **Logistic Regression**: High interpretability, aligned with Basel II scorecard requirements.
-   - **Random Forest**: Non-linear ensemble comparison.
-   - **XGBoost**: Gradient boosting with hyperparameter optimization via **Optuna** and **RandomizedSearchCV**.
-6. **Model Validation**:
-   - ROC-AUC Curve
-   - Kolmogorov-Smirnov (KS) Statistic
-   - Gini Coefficient
-   - Decile Rank-Ordering Analysis
-
----
-
-## 📈 Credit Scorecard Methodology
-
-The final production model employs a calibrated Logistic Regression scorecard to compute log-odds and default probabilities:
-
-$$\text{Log-Odds } (x) = \beta_0 + \sum_{i=1}^{n} \beta_i X_i$$
-
-$$\text{Probability of Default (PD)} = \frac{1}{1 + e^{-x}}$$
-
-$$\text{Non-Default Probability} = 1 - \text{PD}$$
-
-### Scorecard Formula
-$$\text{Credit Score} = \text{Base Score} + (\text{Non-Default Probability} \times \text{Scale Length})$$
-- **Base Score**: `300`
-- **Scale Length**: `600` (yielding a range of **300 to 900**)
-
-### Risk Rating Tiers
-
-| Credit Score Range | Rating Category | Default Risk | Underwriting Advisory |
-| :---: | :---: | :---: | :--- |
-| **750 – 900** | 🟢 **Excellent** | Very Low | Fast-track approval with prime interest rates |
-| **650 – 749** | 🔵 **Good** | Low | Standard approval under regular policy |
-| **500 – 649** | 🟡 **Average** | Medium | Conditional approval with additional verification or collateral |
-| **300 – 499** | 🔴 **Poor** | High | High default probability; recommend decline |
-
----
-
-## 💻 Streamlit Web Application
-
-The interactive web UI allows credit underwriters and analysts to input applicant details and immediately view:
-- **Default Probability**: Percentage likelihood of default.
-- **Credit Score**: Score between 300 and 900 with a visual progress bar indicator.
-- **Credit Rating**: Tiered badge with automated underwriting advice.
-
-### Inputs Required:
-- **Demographics & Financials**: Age, Annual Income, Loan Amount Requested, Loan Tenure (months).
-- **Credit Bureau Metrics**: Avg DPD, Delinquency Ratio (%), Credit Utilization Ratio (%), Open Loan Accounts.
-- **Loan Specifics**: Residence Type (`Owned`, `Rented`, `Mortgage`), Loan Purpose (`Education`, `Home`, `Auto`, `Personal`), Loan Type (`Unsecured`, `Secured`).
-
----
-
-## 🛠️ Local Setup & Installation
-
-### 1. Clone the Repository
+## 🚀 Running Locally
 ```bash
 git clone https://github.com/HanadIsmail/Credit-Risk-Modeling.git
 cd Credit-Risk-Modeling
-```
-
-### 2. Create and Activate a Virtual Environment
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# macOS / Linux
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-```bash
-pip install --upgrade pip
 pip install -r requirements.txt
-```
-
-### 4. Run the Streamlit Application
-```bash
 streamlit run app/main.py
 ```
-The app will open automatically in your browser at `http://localhost:8501`.
 
----
+## ⚠️ Notes
+- Built for a learning/portfolio project modeled on a Codebasics ML course case study (Lauki Finance).
+- Not used for real lending decisions.
 
-## ☁️ Deploying to Streamlit Cloud
-
-You can deploy this application directly to **[Streamlit Community Cloud](https://share.streamlit.io/)** in minutes:
-
-1. **Fork or Push** this repository to your GitHub account (`HanadIsmail/Credit-Risk-Modeling`).
-2. Go to **[share.streamlit.io](https://share.streamlit.io/)** and sign in with GitHub.
-3. Click **"New app"**.
-4. Configure the deployment settings:
-   - **Repository**: `HanadIsmail/Credit-Risk-Modeling`
-   - **Branch**: `main`
-   - **Main file path**: `app/main.py`
-5. Click **"Deploy!"**. Streamlit Cloud will install all dependencies from `requirements.txt` and launch your live application with a public URL!
-
----
-
-## 🧰 Tech Stack
-
-- **Core & Runtime**: Python 3.10+
-- **Data Manipulation**: Pandas, NumPy
-- **Machine Learning**: Scikit-Learn, XGBoost, Optuna, SciPy
-- **Model Serialization**: Joblib
-- **Web App**: Streamlit
-- **Visualization**: Matplotlib, Seaborn
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
